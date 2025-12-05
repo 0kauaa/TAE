@@ -1,0 +1,361 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[a4paper, top=3cm, bottom=2cm, left=3cm, right=2cm]{geometry} % Mantendo a geometria do usuário
+%\usepackage{fontspec}
+
+\usepackage[portuguese, english]{babel} 
+\babelprovide[import, onchar=ids fonts]{portuguese}
+\babelprovide[import, onchar=ids fonts]{english}
+\usepackage{enumitem}
+\setlist[itemize]{label=-}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{indentfirst}
+\usepackage{caption}
+\usepackage{minted}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.2cm}
+\onehalfspacing
+
+\titleformat{\section}{\normalfont\bfseries\Large}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\bfseries\large}{\thesubsection}{1em}{}
+
+\begin{document}
+
+\begin{center}
+    \large \textbf{ P2 - Teoria do Aprendizado Estatístico}
+    \\ Kauã Santana
+    \\ 26 de novembro de 2025
+\end{center}
+
+\tableofcontents
+\newpage
+
+\section{INTRODUÇÃO}
+
+Para a segunda avaliação da matéria de Teoria do Aprendizado Estatístico, foram desenvolvidas 4 aplicações em R de diferentes modelos de aprendizado de máquina: Regressão Linear, Regressão Logística, KNN e Árvore de Decisão. Na aplicação da Regressão Linear, foi utilizado um conjunto de dados de incêndios no Parque Cultural de Montesinho, em Portugal. Nas demais aplicações de classificação, foi utilizado um conjunto de dados fictícios de autoria da Professora Dr.ª Cibele Russo, da Universidade de São Paulo. O objetivo deste trabalho é demonstrar a implementação e a análise dos resultados obtidos com cada um desses modelos.
+
+\section{OS DADOS}
+
+Foram utilizados dois conjuntos de dados distintos para as aplicações. O primeiro conjunto é focado na previsão de área queimada, enquanto o segundo é voltado para problemas de classificação de características de funcionários.
+
+\begin{table}[H]
+\centering
+\caption{Dicionário do Primeiro Conjunto (Incêndios Florestais)}
+\label{tab:dic1}
+\begin{tabular}{|l|l|l|p{7cm}|}
+\hline
+
+\textbf{Variável} & \textbf{Atributo} & \textbf{Tipo} & \textbf{Descrição} \\ \hline
+
+X        & Feature & Inteiro   & Coordenada espacial no eixo X (mapa do parque de Montesinho). Varia de 1 a 9. \\ \hline
+Y        & Feature & Inteiro   & Coordenada espacial no eixo Y (mapa do parque de Montesinho). Varia de 2 a 9. \\ \hline
+month    & Feature & Nominal   & Mês do ano (abreviação em inglês: jan–dec). \\ \hline
+day      & Feature & Nominal   & Dia da semana (abreviação em inglês: mon–sun). \\ \hline
+FFMC     & Feature & Contínuo  & Índice Fine Fuel Moisture Code do sistema FWI. Aproximadamente entre 18.7 e 96.20. \\ \hline
+DMC      & Feature & Contínuo  & Índice Duff Moisture Code. Aproximadamente entre 1.1 e 291.3. \\ \hline
+DC       & Feature & Contínuo  & Índice Drought Code. Intervalo de cerca de 7.9 até 860.6. \\ \hline
+ISI      & Feature & Contínuo  & Índice Initial Spread Index. Varia de 0.0 até cerca de 56.10. \\ \hline
+temp     & Feature & Contínuo  & Temperatura exterior (°C). Varia aproximadamente entre 2.2 e 33.3 °C. \\ \hline
+RH       & Feature & Contínuo  & Umidade relativa do ar (\%). Intervalo de 15\% a 100\%. \\ \hline
+wind     & Feature & Contínuo  & Velocidade do vento (km/h). Aproximadamente entre 0.40 e 9.40 km/h. \\ \hline
+rain     & Feature & Contínuo  & Quantidade de chuva (mm/m²). Geralmente baixa, variando entre 0.0 e 6.4. \\ \hline
+area     & Target  & Contínuo  & Área queimada (hectares). Varia de 0.00 até cerca de 1090.84. \\ \hline
+
+\end{tabular}
+\\ Fonte: adaptado de Cortez e Morais, 2007.
+\end{table}
+
+
+\begin{table}[H]
+\centering
+\caption{Dicionário do Segundo Conjunto (Dados de Funcionários)}
+\label{tab:dic2}
+\begin{tabular}{|l|l|l|p{7cm}|}
+\hline
+
+\textbf{Variável} & \textbf{Atributo} & \textbf{Tipo} & \textbf{Descrição} \\ \hline
+
+Idade               & Feature       & Inteiro       & Idade do funcionário (18-54) \\ \hline
+Gênero              & Target        & Nominal       & Gênero do funcionário (Masculino/Feminino) \\ \hline
+Departamento        & Feature       & Nominal       & Departamento de atuação do funcionário \\ \hline
+Salário             & Feature       & Contínuo      & Salário do funcionário \\ \hline
+Horas\_Trabalhadas  & Feature       & Contínuo      & Horas de trabalho semanal do funcionário \\ \hline
+Produtividade       & Feature       & Contínuo      & Nível de produtividade do funcionário (67.74-112.06)\\ \hline
+Satisfação          & Feature       & Contínuo      & Nível de satisfação do funcionário (39.42-100)\\ \hline
+Tempo\_Empresa      & Feature       & Inteiro       & Tempo de empresa do funcionário (0-30)\\ \hline
+Cursos\_Realizados  & Feature       & Inteiro       & Quantidade de cursos realizados pelo funcionário (0-20) \\ \hline
+Home\_Office        & Feature       & Nominal       & Regime exercido pelo funcionário (Sim/Não) \\ \hline
+
+\end{tabular}
+Fonte: adaptado de Russo, 2025.
+\end{table}
+
+\section{REGRESSÃO LINEAR}
+
+A Regressão Linear foi aplicada ao primeiro conjunto de dados para prever a variável \texttt{area} (área queimada em hectares) com base nas demais features. Foram implementadas funções manuais em R para calcular os coeficientes angular ($\beta_1$) e o intercepto ($\beta_0$), com o objetivo de demonstrar a compreensão da formulação matemática do Modelo de Mínimos Quadrados Ordinários.
+
+\subsection{Códigos Implementados}
+O código a seguir apresenta as funções criadas para o cálculo dos coeficientes de forma manual.
+
+\subsubsection{Função para o Coeficiente Angular ($\beta_1$)}
+\begin{minted}{R}
+angular <- function(x, y) {
+
+  # variaveis
+  n <- length(x)
+  xiyi <- sum(x * y)
+  x_media <- mean(x)
+  y_media <- mean(y)
+  x_var <- var(x)
+
+  # formula
+  dividendo <- xiyi - (n * x_media * y_media)
+  divisor <- (n-1) * x_var
+
+  angular <- dividendo / divisor
+
+  return(angular)
+}
+\end{minted}
+
+\subsubsection{Função para o Intercepto ($\beta_0$)}
+
+\begin{minted}{R}
+# função para calcular o intercepto
+intercepto <- function(x, y, beta_1) {
+
+  # variaveis
+  y_media <- mean(y)
+  x_media <- mean(x)
+
+  # formula
+  intercepto <- y_media - (beta_1 * x_media)
+
+  return(intercepto)
+}
+\end{minted}
+
+\subsubsection{Função para a Reta de Regressão}
+\begin{minted}{R}
+# função para calcular a reta
+reta <- function(angular, intercepto, x) {
+  return(angular + (intercepto * x))
+}
+\end{minted}
+
+\subsection{Resultados e Análise}
+
+Para validação, os coeficientes calculados pelas funções manuais foram comparados com os resultados obtidos pela função nativa \texttt{lm()} do R, utilizando um conjunto de dados aleatório com distribuição normal.
+
+\subsubsection{Saída da função \texttt{lm()}}
+\begin{minted}{R}
+Call:
+lm(formula = y ~ x, data = data.frame(x, y))
+
+Coefficients:
+(Intercept)            x  
+  -0.017484    -0.003221
+\end{minted}
+
+\subsubsection{Saída das Funções Manuais}
+\begin{minted}{R}
+[1] "b0: -0.0174840103550686 b1: -0.00322060644479855"
+\end{minted}
+
+Os coeficientes calculados pelas funções implementadas ($b_0$ e $b_1$) são idênticos aos coeficientes retornados pela função \texttt{lm()}, confirmando a correção da implementação das fórmulas para o modelo de Regressão Linear Simples.
+
+\section{REGRESSÃO LOGÍSTICA}
+
+A Regressão Logística foi utilizada para um problema de classificação binária no segundo conjunto de dados (Funcionários). O objetivo foi prever a variável \texttt{Gênero} (codificada em \texttt{Gênero\_Masculino}) com base nas demais características do funcionário (\texttt{Idade}, \texttt{Salário}, \texttt{Departamento}, etc.). Foi utilizado o método \texttt{glm} com a família \texttt{binomial} e a função de ligação (\textit{link}) \texttt{logit}.
+
+\subsection{Códigos Implementados}
+
+\subsubsection{Modelo Completo}
+\begin{minted}{R}
+modelo <- glm(
+  Gênero_Masculino ~ . - Gênero_Masculino,
+  data = treino,
+  family = binomial(link = "logit")
+)
+\end{minted}
+
+\subsubsection{Função Stepwise AIC (Otimização)}
+Esta função é um procedimento de seleção de variáveis que utiliza o Critério de Informação de Akaike (AIC) para encontrar o modelo que melhor se ajusta aos dados com o menor número de variáveis preditoras.
+\begin{minted}{R}
+stepwise_aic <- function(x, y, verbose = TRUE) {
+
+    # regressoras, sem a target
+    dados <- subset(x, select = -c(y))
+
+    # distribuição da target
+    formula_nula <- as.formula("y ~ 1")
+    formula_completa <- as.formula(paste(
+    "y ~", paste(names(x),collapse = " + "))
+    )
+
+    # steps
+    modelo_step <- step(
+        glm(formula_nula, data = dados, family = binomial),
+        scope = list(lower = formula_nula, upper = formula_completa),
+        direction = "both", trace = ifelse(verbose, 1, 0)
+        )
+
+    # resultados
+    if (verbose) {
+        cat("\nModelo final:\n")
+        print(summary (modelo_step))
+    }
+
+    return (modelo_step)
+}
+\end{minted}
+
+\subsection{Resultados e Análise}
+
+O resumo do modelo revela a significância estatística das variáveis para a predição do \texttt{Gênero\_Masculino}.
+
+\subsubsection{Saída do Resumo do Modelo}
+\begin{minted}{R}
+summary(modelo)
+
+
+Call:
+glm(formula = Gênero_Masculino ~ . - Gênero_Masculino,
+    family = binomial(link = "logit"), 
+    data = treino)
+
+Coefficients:
+                      Estimate Std. Error z value Pr(>|z|)    
+(Intercept)          1.561e+00  2.856e+00   0.547   0.5846    
+Idade               -3.775e-02  3.010e-02  -1.254   0.2097    
+Salário              1.794e-04  4.372e-05   4.104 4.06e-05 ***
+Horas_Trabalhadas    7.228e-02  1.117e-01   0.647   0.5177    
+Produtividade       -3.566e-02  5.591e-02  -0.638   0.5237    
+Satisfação          -6.316e-03  1.825e-02  -0.346   0.7293    
+Tempo_Empresa       -7.739e-02  4.514e-02  -1.715   0.0864 .  
+Cursos_Realizados    1.167e-02  5.327e-02   0.219   0.8266    
+Departamento_RH     -1.099e-01  5.180e-01  -0.212   0.8320    
+Departamento_TI     -8.815e-01  4.782e-01  -1.843   0.0653 .  
+Departamento_Vendas  6.264e-01  4.906e-01   1.277   0.2017    
+Home_Office_Sim     -3.855e-01  6.112e-01  -0.631   0.5282    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+(Dispersion parameter for binomial family taken to be 1)
+
+    Null deviance: 254.29  on 183  degrees of freedom
+Residual deviance: 229.95  on 172  degrees of freedom
+AIC: 253.95
+
+Number of Fisher Scoring iterations: 4
+\end{minted}
+
+\subsubsection{Análise dos Coeficientes}
+Os resultados mostram que a variável \texttt{Salário} é a mais estatisticamente significativa para a predição do gênero (\textit{$Pr(>|z|)$} de $4.06 \times 10^{-5}$ - altamente significativo). O coeficiente positivo indica que um aumento no salário está associado a uma maior probabilidade de o funcionário ser classificado como \texttt{Masculino} (assumindo que esta é a classe de referência positiva). As variáveis \texttt{Tempo\_Empresa} e \texttt{Departamento\_TI} são marginalmente significativas, apresentanto um p-valor $< 0.1$.
+
+\section{K-NEAREST NEIGHBORS (KNN)}
+
+ foi aplicado como um classificador para determinar o \texttt{Departamento} de um funcionário com base em suas características. O KNN é um método não-paramétrico que classifica um ponto de dados com base na maioria dos $K$ vizinhos mais próximos. Neste caso, foi utilizado $K=20$.
+
+\subsection{Códigos Implementados}
+
+\subsubsection{Seleção e Predição}
+O código seleciona uma amostra aleatória do conjunto de dados para teste e aplica o modelo KNN, utilizando o restante dos dados como treino.
+\begin{minted}{R}
+# linha teste (aleatoria)
+n <- sample(1:nrow(x), 1)
+linha <- x[n, ]
+\end{minted}
+
+\begin{minted}{R}
+# modelo
+knn_model <- knn(
+  train = x[-n, ],
+  test = linha,
+  cl = y[-n],
+  k = 20
+)
+\end{minted}
+
+\subsection{Resultados e Análise}
+
+\subsubsection{Célula Testada e Predição}
+\begin{minted}{R}
+[1] "Célula testada (dados originais):"
+ID Idade    Gênero Departamento Salário Horas_Trabalhadas Produtividade
+81    32 Masculino           TI 9382.24                37         85.18
+Satisfação Tempo_Empresa Cursos_Realizados Home_Office
+     68.31             5                 0         Não
+\end{minted}
+
+\begin{minted}{R}
+[1] "Departamento predito:"
+[1] "TI"
+[1] "Departamento real:"
+[1] "TI"
+\end{minted}
+
+\subsubsection{Análise}
+A predição foi bem-sucedida, com o modelo classificando corretamente o funcionário 81 no departamento \texttt{TI}. O sucesso do KNN depende fortemente da escolha do valor de $K$ e do pré-processamento dos dados (normalmente, a padronização das features contínuas é crucial para garantir que todas as dimensões contribuam igualmente para o cálculo da distância euclidiana). Um $K=20$ sugere que, dos 20 vizinhos mais próximos desta amostra, a maioria (ou todos) pertenciam ao departamento de \texttt{TI}.
+
+\section{ÁRVORE DE DECISÃO}
+
+O modelo de Árvore de Decisão (\texttt{rpart}) foi utilizado como outro classificador para a variável \texttt{Departamento}, usando o critério de impureza Gini. Este modelo particiona recursivamente o espaço de features em regiões para maximizar a homogeneidade dentro de cada nó.
+
+\subsection{Códigos Implementados}
+
+\subsubsection{Criação do Modelo}
+\begin{minted}{R}
+# Criar o modelo de árvore de decisão
+modelo <- rpart(
+  Departamento ~ Idade 
++ Gênero + Home_Office
++ Salário + Horas_Trabalhadas
++ Produtividade + Satisfação 
++ Tempo_Empresa + Cursos_Realizados,
+  data = data,
+  method = "class",
+  parms = list(split = "gini"),
+  control = rpart.control(cp = 0.01, minsplit = 2)
+)
+\end{minted}
+
+\subsubsection{Predição}
+O modelo é testado com um novo funcionário fictício.
+\begin{minted}{R}
+novo_cliente <- data.frame(
+
+    Idade	= 19,
+    Gênero = 'Masculino',
+    Departamento = 'TI',
+    Salário = 5650.89,
+    Horas_Trabalhadas =	86,
+    Produtividade = 87.1,
+    Satisfação =	190.90,
+    Tempo_Empresa	= 11,
+    Cursos_Realizados = 6
+)
+previsao <- predict(modelo, novo_cliente, type = "class")
+previsao
+
+1: Sim
+Levels:
+'Não''Sim'
+\end{minted}
+
+\subsection{Resultados e Análise}
+O resultado da predição para o novo funcionário foi \texttt{Sim}, com base nos níveis de classificação binária encontrados.
+
+O algoritmo \texttt{rpart} utiliza o índice de Gini, que mede a probabilidade de um elemento ser classificado incorretamente quando escolhido aleatoriamente, para determinar as melhores divisões (splits) na árvore. O fato de o resultado da predição ser \texttt{Sim} com níveis \texttt{'Não''Sim'} sugere que, apesar de a variável \texttt{Departamento} ter sido utilizada na fórmula, a target real que a árvore aprendeu a prever, ou a forma como a variável \texttt{Departamento} foi processada, resultou em uma classificação binária (\textit{e.g.}, se o departamento é 'TI' ou 'Não-TI'). O ponto de corte inicial da árvore seria a feature que fornecesse o maior ganho de informação (maior redução na impureza Gini).
+
+\section{AGRADECIMENTOS}
+
+Antes de finalizar, gostaria de agradecer ao senhor, prof. João, por ter insistido tanto nos menores detalhes para a excelência dos trabalhos, mesmo que em algo tão sucinto quanto a serifa de uma fonte. Venho aprendendo com o senhor desde o primeiro semestre e, talvez, o maior aprendizado que absorvi de ti foi a persistência e dedicação naquilo que é proposto, porque eu sei que posso sempre entregar mais. Infelizmente não pude me dedicar o tanto quanto gostaria nesta matéria, mas esses projetos, e outros futuros, serão sempre revisitados e aprimorados. Serão sempre uma fonte de inspiração e conhecimento. Obrigado. \\ \\
+\textbf{Códigos em git:} \url{https://github.com/0kauaa/TAE}
+\end{document}
